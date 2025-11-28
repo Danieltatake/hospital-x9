@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reservas — X9 Hospital</title>
+  <style>
+    body{font-family:Inter,Arial;margin:0;background:#f6f9ff;color:#122}
+    header{background:white;padding:12px 18px;box-shadow:0 3px 14px rgba(2,12,30,.06)}
+    .container{max-width:980px;margin:20px auto;padding:18px}
+    .card{background:white;padding:16px;border-radius:10px;box-shadow:0 8px 30px rgba(5,20,40,.06);margin-bottom:12px}
+    input,select,textarea{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #e6eefb}
+    .row{display:flex;gap:10px}
+    .row .col{flex:1}
+    .btn{background:#0b6efd;color:white;padding:10px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:700}
+    .small{font-size:13px;color:#666}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;border-bottom:1px solid #eef3ff;text-align:left}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center">
+      <div><strong>X9 Hospital</strong> — Reservas</div>
+      <div id="userArea" style="font-weight:600"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h3>Nova Reserva</h3>
+      <form id="formReserva">
+        <div class="row">
+          <div class="col">
+            <label>Departamento</label>
+            <select id="departamento" required>
+              <option value="">Escolha...</option>
+              <option>Clínica Geral</option>
+              <option>Pediatria</option>
+              <option>Cardiologia</option>
+              <option>Ortopedia</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Médico</label>
+            <select id="medico" required>
+              <option value="">Escolha...</option>
+              <option>Dr. Silva</option>
+              <option>Dra. Pereira</option>
+              <option>Dr. Gomes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <div class="col">
+            <label>Data</label>
+            <input id="data" type="date" required />
+          </div>
+          <div class="col">
+            <label>Hora</label>
+            <input id="hora" type="time" required />
+          </div>
+        </div>
+
+        <label>Observações</label>
+        <textarea id="obs" rows="2" placeholder="Sintomas, preferências, etc."></textarea>
+
+        <button class="btn" type="submit" style="margin-top:12px">Agendar</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Minhas Reservas</h3>
+      <div id="listaReserva" class="small">Carregando...</div>
+    </div>
+
+    <div class="card small">
+      <button id="btnSair" style="background:#d9534f;padding:8px 10px;border-radius:8px;color:white;border:0">Sair</button>
+      <p style="margin-top:10px">Dados demo: <strong>localStorage</strong>. Para produção troque por backend (PHP + MySQL).</p>
+    </div>
+  </main>
+
+  <script>
+    // Verifica sessão
+    const sess = JSON.parse(localStorage.getItem('x9_session') || 'null');
+    if(!sess){ alert('Você precisa estar logado.'); location.href = 'login.html'; }
+
+    document.getElementById('userArea').textContent = sess.nome + ' • ' + sess.email;
+
+    // carregar reservas
+    function carregarReservas(){
+      try{
+        const all = JSON.parse(localStorage.getItem('x9_reservas') || '[]');
+        return all;
+      }catch(e){ return []; }
+    }
+    function salvarReservas(arr){ localStorage.setItem('x9_reservas', JSON.stringify(arr)); }
+
+    function renderReservas(){
+      const all = carregarReservas().filter(r => r.userId === sess.id);
+      const container = document.getElementById('listaReserva');
+      if(all.length === 0){
+        container.innerHTML = '<div>Nenhuma reserva encontrada.</div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>Data</th><th>Hora</th><th>Depto</th><th>Médico</th><th>Obs</th><th></th></tr></thead><tbody>';
+      all.forEach(r => {
+        html += `<tr>
+          <td>${r.data}</td>
+          <td>${r.hora}</td>
+          <td>${r.departamento}</td>
+          <td>${r.medico}</td>
+          <td>${(r.obs||'')}</td>
+          <td><button data-id="${r.id}" class="btnCancelar" style="background:#f05b5b;padding:6px 8px;border-radius:6px">Cancelar</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+
+      // attach cancel buttons
+      Array.from(document.getElementsByClassName('btnCancelar')).forEach(b => {
+        b.addEventListener('click', function(){
+          const id = Number(this.getAttribute('data-id'));
+          if(!confirm('Confirmar cancelamento?')) return;
+          let arr = carregarReservas();
+          arr = arr.filter(x=>x.id !== id);
+          salvarReservas(arr);
+          renderReservas();
+        });
+      });
+    }
+
+    document.getElementById('formReserva').addEventListener('submit', function(e){
+      e.preventDefault();
+      const departamento = document.getElementById('departamento').value;
+      const medico = document.getElementById('medico').value;
+      const data = document.getElementById('data').value;
+      const hora = document.getElementById('hora').value;
+      const obs = document.getElementById('obs').value.trim();
+
+      if(!departamento||!medico||!data||!hora){ alert('Preencha todos os campos'); return; }
+
+      // checagem simples: não permitir reservas passadas
+      const now = new Date();
+      const dt = new Date(data + 'T' + hora);
+      if(dt < now){ if(!confirm('A data/hora selecionada já passou. Deseja continuar?')) return; }
+
+      const arr = carregarReservas();
+      const nova = { id: Date.now(), userId: sess.id, departamento, medico, data, hora, obs };
+      arr.push(nova);
+      salvarReservas(arr);
+      renderReservas();
+      this.reset();
+      alert('Reserva criada com sucesso!');
+    });
+
+    document.getElementById('btnSair').addEventListener('click', function(){ localStorage.removeItem('x9_session'); location.href = 'index.html'; });
+
+    renderReservas();
+  </script>
+</body>
+</html>
