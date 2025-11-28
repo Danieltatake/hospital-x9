@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login — X9 Hospital</title>
+  <style>
+    body{font-family:Inter,Arial;margin:0;background:#f4f7fb;color:#112}
+    .box{max-width:500px;margin:60px auto;background:white;padding:22px;border-radius:10px;box-shadow:0 10px 30px rgba(2,10,40,.08)}
+    h1{margin:0 0 8px}
+    input{width:100%;padding:11px;border-radius:8px;border:1px solid #e6ecf8;margin-top:8px}
+    .btn{margin-top:12px;padding:10px 14px;background:#0b6efd;color:white;border-radius:8px;border:0;cursor:pointer;font-weight:700}
+    .small{font-size:13px;color:#666;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Entrar — X9 Hospital</h1>
+    <p class="small">Digite seu email e senha.</p>
+
+    <form id="formLogin">
+      <label for="email">Email</label>
+      <input id="email" type="email" required />
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" required />
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+
+    <p class="small">Não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
+
+    <div id="msg" style="margin-top:10px;color:red"></div>
+  </div>
+
+  <script>
+    function carregarUsuarios(){ try{ return JSON.parse(localStorage.getItem('x9_usuarios')||'[]'); }catch(e){return[];} }
+    document.getElementById('formLogin').addEventListener('submit', function(e){
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const senha = document.getElementById('senha').value;
+      const users = carregarUsuarios();
+      const user = users.find(u => u.email === email && u.senha === senha);
+      if(!user){
+        document.getElementById('msg').textContent = 'Email ou senha inválidos.';
+        return;
+      }
+      // armazenar sessão simples
+      localStorage.setItem('x9_session', JSON.stringify({ id: user.id, nome: user.nome, email: user.email }));
+      // redireciona para reservas
+      location.href = 'reservas.html';
+    });
+
+    // se já estiver logado, redireciona
+    (function(){
+      const s = localStorage.getItem('x9_session');
+      if(s) location.href = 'reservas.html';
+    })();
+  </script>
+</body>
+</html>
